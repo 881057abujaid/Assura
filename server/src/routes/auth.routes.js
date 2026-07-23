@@ -28,8 +28,7 @@ router.post(
 router.post(
     "/logout",
     verifyJWT,
-    authorizeRoles(Role.CUSTOMER),
     authController.logout
-)
+);
 
 export default router;
