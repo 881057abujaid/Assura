@@ -6,6 +6,7 @@ import userRoutes from "./user.routes.js";
 import policyTypeRoutes from "./policy-type.routes.js";
 import customerRoutes from "./customer.routes.js";
 import policyRoutes from "./policy.routes.js";
+import claimRoutes from "./claim.routes.js";
 
 const router = Router();
 
@@ -15,5 +16,6 @@ router.use("/users", userRoutes);
 router.use("/policy-types", policyTypeRoutes);
 router.use("/customers", customerRoutes);
 router.use("/policies", policyRoutes);
+router.use("/claims", claimRoutes);
 
 export default router;
