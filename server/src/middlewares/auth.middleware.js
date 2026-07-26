@@ -47,7 +47,7 @@ export const authorizeRoles = (...roles) => {
     return (req, res, next) => {
         // Check if user is attached to request
         if (!req.user) {
-            throw new ApiError(401, "Unathorized request.");
+            throw new ApiError(401, "Unauthorized request.");
         }
 
         // Check if user has one of the authorized roles
