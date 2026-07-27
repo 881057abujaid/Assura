@@ -104,17 +104,19 @@ model Claim {
 }
 
 model Document {
-  id         String    @id @default(uuid())
-  fileName   String
-  fileUrl    String
-  mimeType   String
-  fileSize   Int
-  customerId String?
-  claimId    String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  claim      Claim?    @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  fileName    String
+  fileUrl     String
+  mimeType    String
+  storagePath String
+  mimeType    String
+  fileSize    Int
+  customerId  String?
+  claimId     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  claim       Claim?    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
 }
 
 enum Role {
