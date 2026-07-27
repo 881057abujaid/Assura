@@ -1,7 +1,7 @@
 import { ZodError } from "zod";
 import ApiError from "../utils/ApiError.js";
 
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res, _next) => {
     if (err instanceof ApiError) {
         return res.status(err.statusCode).json({
             success: false,

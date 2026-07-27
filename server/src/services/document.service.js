@@ -53,9 +53,9 @@ documentService.uploadDocument = async ({ file, customerId, claimId }) => {
             },
         });
     } catch (error) {
-        try {
-            await deleteFile(storagePath);
-        } catch (_) { }
+        await deleteFile(storagePath).catch(() => {
+            // Ignore cleanup errors if file deletion fails.
+        });
 
         throw error;
     }
@@ -94,15 +94,6 @@ documentService.getCustomerDocuments = async (customerId) => {
         where: { id: customerId },
         select: {
             id: true,
-            fileName: true,
-            fileUrl: true,
-            storagePath: true,
-            mimeType: true,
-            fileSize: true,
-            createdAt: true,
-        },
-        orderBy: {
-            createdAt: "desc",
         },
     });
 
@@ -147,7 +138,7 @@ documentService.deleteDocument = async (documentId) => {
 
     try {
         await deleteFile(document.storagePath);
-    } catch (_) {
+    } catch (_error) {
         throw new ApiError(500, "Failed to delete document from storage.");
     }
 

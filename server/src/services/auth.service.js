@@ -130,6 +130,9 @@ authService.refreshAccessToken = async (refreshToken) => {
         where: {
             id: decoded.id,
         },
+        omit: {
+            password: true,
+        },
     });
 
     if (!user) {
@@ -141,7 +144,7 @@ authService.refreshAccessToken = async (refreshToken) => {
     }
 
     const token = await generateAccessAndRefreshToken(user);
-    const { password, refreshToken: _, ...safeUser } = user;
+    const { password: _password, refreshToken: _refreshToken, ...safeUser } = user;
 
     return {
         user: safeUser,
