@@ -2,12 +2,6 @@ import { z } from "zod";
 import { PolicyStatus } from "@prisma/client";
 
 export const createPolicySchema = z.object({
-    policyNumber: z
-        .string()
-        .trim()
-        .min(1, "Policy number is required")
-        .max(50, "Policy number must be at most 50 characters"),
-
     customerId: z
         .uuid("Invalid customer ID"),
 
