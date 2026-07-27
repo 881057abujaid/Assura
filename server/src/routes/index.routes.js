@@ -7,6 +7,8 @@ import policyTypeRoutes from "./policy-type.routes.js";
 import customerRoutes from "./customer.routes.js";
 import policyRoutes from "./policy.routes.js";
 import claimRoutes from "./claim.routes.js";
+import documentRoutes from "./document.routes.js";
+import paymentRoutes from "./payment.routes.js";
 
 const router = Router();
 
@@ -17,5 +19,7 @@ router.use("/policy-types", policyTypeRoutes);
 router.use("/customers", customerRoutes);
 router.use("/policies", policyRoutes);
 router.use("/claims", claimRoutes);
+router.use("/documents", documentRoutes);
+router.use("/payments", paymentRoutes);
 
 export default router;

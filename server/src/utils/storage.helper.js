@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase.js";
+import supabase from "../lib/supabase.js";
 import ApiError from "./ApiError.js";
 import env from "../config/env.js";
 

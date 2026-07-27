@@ -7,7 +7,7 @@ import {
 } from "../validators/document.validator.js";
 import { verifyJWT, authorizeRoles } from "../middlewares/auth.middleware.js";
 import validate from "../middlewares/validate.middleware.js";
-import upload from "../middlewares/upload.middleware.js";
+import { upload } from "../middlewares/upload.middleware.js";
 
 const router = Router();
 

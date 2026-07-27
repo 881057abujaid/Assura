@@ -1,4 +1,4 @@
-import prisma from "../config/prisma.js";
+import prisma from "../lib/prisma.js";
 import ApiError from "../utils/ApiError.js";
 import { generateStoragePath } from "../utils/generateStoragePath.js";
 import { uploadFile, deleteFile } from "../utils/storage.helper.js";
