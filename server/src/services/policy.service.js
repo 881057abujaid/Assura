@@ -1,13 +1,13 @@
 import prisma from "../lib/prisma.js";
 import ApiError from "../utils/ApiError.js";
 import { Role } from "@prisma/client";
+import { generatePolicyNumber } from "../utils/generatePolicyNumber.js";
 
 export const policyService = {};
 
 policyService.createPolicy = async (data) => {
     // Destructure the data
     const {
-        policyNumber,
         customerId,
         policyTypeId,
         agentId,
@@ -57,16 +57,8 @@ policyService.createPolicy = async (data) => {
         throw new ApiError(400, "Assigned user is not an agent.");
     }
 
-    // Check policy number
-    const existingPolicy = await prisma.policy.findUnique({
-        where: {
-            policyNumber,
-        },
-    });
-
-    if (existingPolicy) {
-        throw new ApiError(409, "Policy number already exists.");
-    }
+    // Generate policy number
+    const policyNumber = await generatePolicyNumber();
 
     // Create policy
     const policy = await prisma.policy.create({
