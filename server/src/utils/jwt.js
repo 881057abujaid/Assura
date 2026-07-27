@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-
+import ApiError from "./ApiError.js";
 import env from "../config/env.js";
 
 export const generateAccessToken = (payload) => {
@@ -29,7 +29,7 @@ export const verifyAccessToken = (token) => {
 export const verifyRefreshToken = (token) => {
     try {
         return jwt.verify(token, env.REFRESH_TOKEN_SECRET);
-    } catch (error) {
+    } catch (_error) {
         throw new ApiError(401, "Invalid or expired refresh token");
     }
 };
