@@ -1,4 +1,3 @@
-import React from 'react'
 import { Link } from 'react-router-dom'
 import { AlertCircle, ArrowLeft } from 'lucide-react'
 
@@ -11,7 +10,7 @@ function NotFoundPage() {
 
       {/* Glassmorphic Card */}
       <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-xl p-8 shadow-2xl text-center transition-all duration-300 hover:border-slate-700/80">
-        
+
         {/* Warning Icon */}
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 mx-auto mb-6 shadow-lg">
           <AlertCircle className="h-8 w-8" />

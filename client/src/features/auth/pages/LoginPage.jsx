@@ -1,4 +1,3 @@
-import React from 'react'
 import { Shield, Mail, Lock } from 'lucide-react'
 
 function LoginPage() {
@@ -15,7 +14,7 @@ function LoginPage() {
 
       {/* Glassmorphic Card */}
       <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-xl p-8 shadow-2xl transition-all duration-300 hover:border-slate-700/80">
-        
+
         {/* Header / Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 to-cyan-500 shadow-lg shadow-purple-500/30">
