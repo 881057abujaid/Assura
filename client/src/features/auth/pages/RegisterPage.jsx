@@ -7,22 +7,24 @@ import AuthCard from "../components/AuthCard";
 import AuthHeader from "../components/AuthHeader";
 import AuthLayout from "../components/AuthLayout";
 
-function LoginPage() {
+function RegisterPage() {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    // Authentication logic will be implemented
-    // in the authentication milestone.
+    // Registration logic will be implemented
+    // in a future milestone.
   };
 
   return (
     <AuthLayout>
       <AuthHeader
-        title="Sign in to Assura"
-        subtitle="Manage your policies and claims securely."
+        title="Create your account"
+        subtitle="Create your account to manage your insurance policies securely."
       />
 
       <AuthCard className="mt-8">
@@ -32,6 +34,15 @@ function LoginPage() {
           className="space-y-6"
         >
           <div className="space-y-4">
+            <Input
+              type="text"
+              label="Full Name"
+              placeholder="John Doe"
+              autoComplete="name"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+            />
+
             <Input
               type="email"
               label="Email Address"
@@ -43,22 +54,20 @@ function LoginPage() {
 
             <Input
               type="password"
-              label={
-                <span className="flex w-full items-center justify-between">
-                  <span>Password</span>
-
-                  <Link
-                    to="/forgot-password"
-                    className="text-xs font-semibold text-primary transition-colors hover:text-primary/80"
-                  >
-                    Forgot password?
-                  </Link>
-                </span>
-              }
+              label="Password"
               placeholder="••••••••"
-              autoComplete="current-password"
+              autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+            />
+
+            <Input
+              type="password"
+              label="Confirm Password"
+              placeholder="••••••••"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
             />
           </div>
 
@@ -66,15 +75,16 @@ function LoginPage() {
             type="submit"
             className="w-full"
           >
-            Sign In
+            Create Account
           </Button>
+
           <p className="text-center text-sm text-text-secondary">
-            Don't have an account?{" "}
+            Already have an account?{" "}
             <Link
-              to="/register"
+              to="/login"
               className="font-semibold text-primary transition-colors hover:text-primary/80"
             >
-              Create Account
+              Sign In
             </Link>
           </p>
         </form>
@@ -83,4 +93,4 @@ function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default RegisterPage;
