@@ -10,3 +10,5 @@ generated/
 .vscode/
 
 .DS_Store
+
+GEMINI_CONTEXT.md
