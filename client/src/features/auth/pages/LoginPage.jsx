@@ -1,22 +1,48 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-hot-toast";
 
-import { Button, Input } from "../../../components/ui";
+import { Button, Input, Alert } from "../../../components/ui";
 
+import { useLogin } from "../hooks/useLogin";
+import { useAuth } from "../../../context/AuthContext";
+import { loginSchema } from "../validations/auth.validation";
 import AuthCard from "../components/AuthCard";
 import AuthHeader from "../components/AuthHeader";
 import AuthLayout from "../components/AuthLayout";
 
 function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { login, loading, error } = useLogin();
+  const { setUser } = useAuth();
+  const navigate = useNavigate();
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-
-    // Authentication logic will be implemented
-    // in the authentication milestone.
+  const onSubmit = async (data) => {
+    try {
+      const res = await login(data);
+      setUser(res.user);
+      toast.success("Signed in successfully!");
+      navigate("/");
+    } catch {
+      // Error is already handled by the hook and displayed inline via Alert
+    }
   };
+
+
+
+
 
   return (
     <AuthLayout>
@@ -27,18 +53,25 @@ function LoginPage() {
 
       <AuthCard className="mt-8">
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           noValidate
           className="space-y-6"
         >
+          {error && (
+            <Alert variant="error">
+              {error}
+            </Alert>
+          )}
+
           <div className="space-y-4">
             <Input
               type="email"
               label="Email Address"
               placeholder="you@example.com"
               autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              error={errors.email?.message}
+              disabled={loading}
+              {...register("email")}
             />
 
             <Input
@@ -57,17 +90,20 @@ function LoginPage() {
               }
               placeholder="••••••••"
               autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              error={errors.password?.message}
+              disabled={loading}
+              {...register("password")}
             />
           </div>
 
           <Button
             type="submit"
+            loading={loading}
             className="w-full"
           >
             Sign In
           </Button>
+
           <p className="text-center text-sm text-text-secondary">
             Don't have an account?{" "}
             <Link
@@ -83,4 +119,4 @@ function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default LoginPage;

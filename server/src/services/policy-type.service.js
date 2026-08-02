@@ -5,9 +5,11 @@ export const policyTypeService = {};
 
 policyTypeService.createPolicyType = async ({ name, description }) => {
     // Check if policy type already exists
-    const existingPolicyType = await prisma.policyType.findUnique({
+    const existingPolicyType = await prisma.policyType.findFirst({
         where: {
-            name,
+            name: {
+                mode: "insensitive",
+            },
         },
     });
 
@@ -67,14 +69,26 @@ policyTypeService.updatePolicyType = async ({ policyTypeId, name, description })
 
     if (name) {
         // Check if updated policy type name is same as existing policy type name
-        if (existingPolicyType.name === name) {
-            throw new ApiError(409, "Please provide a different policy type name.");
+        if (
+            existingPolicyType.name.trim().toLowerCase() ===
+            name.trim().toLowerCase()
+        ) {
+            throw new ApiError(
+                409,
+                "Please provide a different policy type name."
+            );
         }
 
         // Check if updated policy type name is already exists in DB
-        const existingPolicyTypeByName = await prisma.policyType.findUnique({
+        const existingPolicyTypeByName = await prisma.policyType.findFirst({
             where: {
-                name,
+                name: {
+                    equals: name.trim().toLowerCase(),
+                    mode: "insensitive",
+                },
+                NOT: {
+                    id: policyTypeId,
+                },
             },
         });
 

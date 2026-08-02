@@ -2,7 +2,7 @@ import { forwardRef } from "react";
 import clsx from "clsx";
 
 const CARD_BASE_STYLES =
-  "rounded-2xl border border-border-custom bg-surface p-6 transition-all duration-150 hover:border-slate-300";
+  "rounded-2xl border border-border-custom bg-bg-base p-6 transition-all duration-150 hover:border-primary/30";
 
 const Card = forwardRef(
   (

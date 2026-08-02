@@ -9,26 +9,29 @@ import {
     reviewClaimSchema
 } from "../validators/claim.validator.js";
 
+import { requireCompletedProfile } from "../middlewares/profile.middleware.js";
+
 const router = Router();
 
 router.use(verifyJWT);
+router.use(requireCompletedProfile);
 
 router.post(
     "/",
-    authorizeRoles(Role.ADMIN, Role.AGENT),
+    authorizeRoles(Role.ADMIN, Role.AGENT, Role.CUSTOMER),
     validate(createClaimSchema),
     claimController.createClaim
 );
 
 router.get(
     "/",
-    authorizeRoles(Role.ADMIN, Role.AGENT),
+    authorizeRoles(Role.ADMIN, Role.AGENT, Role.CUSTOMER),
     claimController.getAllClaims
 );
 
 router.get(
     "/:claimId",
-    authorizeRoles(Role.ADMIN, Role.AGENT),
+    authorizeRoles(Role.ADMIN, Role.AGENT, Role.CUSTOMER),
     claimController.getClaimById
 );
 

@@ -5,15 +5,25 @@ import validate from "../middlewares/validate.middleware.js";
 import { Role } from "@prisma/client";
 import {
     createPaymentSchema,
+    customerPaySchema,
     deletePaymentSchema,
     getPaymentByIdSchema,
     getPolicyPaymentsSchema,
-    updatePaymentSchema,
 } from "../validators/payment.validator.js";
+
+import { requireCompletedProfile } from "../middlewares/profile.middleware.js";
 
 const router = Router();
 
 router.use(verifyJWT);
+router.use(requireCompletedProfile);
+
+router.post(
+    "/customer-pay",
+    authorizeRoles(Role.CUSTOMER),
+    validate(customerPaySchema),
+    paymentController.customerPay
+);
 
 router.post(
     "/",
@@ -42,13 +52,7 @@ router.get(
     paymentController.getPaymentById
 );
 
-router.patch(
-    "/:paymentId",
-    authorizeRoles(Role.ADMIN, Role.AGENT),
-    validate(getPaymentByIdSchema, "params"),
-    validate(updatePaymentSchema),
-    paymentController.updatePayment
-);
+
 
 router.delete(
     "/:paymentId",

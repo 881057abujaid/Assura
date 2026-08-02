@@ -1,6 +1,6 @@
 import prisma from "../lib/prisma.js";
 import ApiError from "../utils/ApiError.js";
-import { Role } from "@prisma/client";
+import { Role, Prisma } from "@prisma/client";
 import { generatePolicyNumber } from "../utils/generatePolicyNumber.js";
 
 export const policyService = {};
@@ -24,10 +24,22 @@ policyService.createPolicy = async (data) => {
         where: {
             id: customerId,
         },
+        include: {
+            user: {
+                select: {
+                    role: true,
+                    status: true,
+                },
+            },
+        },
     });
 
     if (!customer) {
         throw new ApiError(404, "Customer not found.");
+    }
+
+    if (customer.user?.role !== Role.CUSTOMER) {
+        throw new ApiError(400, "Selected user id not a customer.")
     }
 
     // Check policy type
@@ -219,4 +231,60 @@ policyService.deletePolicy = async (policyId) => {
     });
 
     return deletedPolicy;
+};
+
+policyService.applyPolicy = async (userId, data) => {
+    const { policyTypeId, startDate, endDate, description } = data;
+
+    const customer = await prisma.customer.findUnique({
+        where: { userId },
+    });
+
+    if (!customer) {
+        throw new ApiError(404, "Customer profile not found.");
+    }
+
+    const policyType = await prisma.policyType.findUnique({
+        where: { id: policyTypeId },
+    });
+
+    if (!policyType) {
+        throw new ApiError(404, "Policy Type not found.");
+    }
+
+    const activeAgent = await prisma.user.findFirst({
+        where: {
+            role: Role.AGENT,
+            status: "ACTIVE",
+        },
+        select: {
+            id: true,
+        },
+    });
+
+    if (!activeAgent) {
+        throw new ApiError(400, "No active agent available to process policy application. Please try again later.");
+    }
+
+    const premiumAmount = new Prisma.Decimal(150.00);
+    const coverageAmount = new Prisma.Decimal(10000.00);
+
+    const policyNumber = await generatePolicyNumber();
+
+    const policy = await prisma.policy.create({
+        data: {
+            policyNumber,
+            customerId: customer.id,
+            policyTypeId,
+            agentId: activeAgent.id,
+            premiumAmount,
+            coverageAmount,
+            description,
+            startDate,
+            endDate,
+            status: "PENDING",
+        },
+    });
+
+    return policy;
 };

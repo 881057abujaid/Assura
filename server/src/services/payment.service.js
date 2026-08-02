@@ -1,7 +1,7 @@
-import { PolicyStatus, Prisma } from "@prisma/client";
+import { PolicyStatus, Prisma, PaymentStatus, PaymentMethod } from "@prisma/client";
 import prisma from "../lib/prisma.js";
 import ApiError from "../utils/ApiError.js";
-import { PaymentStatus } from "@prisma/client";
+import generateTransactionId from "../utils/generateTransactionId.js";
 
 export const paymentService = {};
 
@@ -10,7 +10,7 @@ paymentService.createPayment = async ({
     amount,
     paymentDate,
     paymentMethod,
-    transactionId,
+    status,
 }) => {
     const policy = await prisma.policy.findUnique({
         where: {
@@ -19,6 +19,7 @@ paymentService.createPayment = async ({
         select: {
             id: true,
             status: true,
+            premiumAmount: true,
         },
     });
 
@@ -26,10 +27,17 @@ paymentService.createPayment = async ({
         throw new ApiError(404, "Policy not found.");
     }
 
+    // check policy status
     if (policy.status !== PolicyStatus.ACTIVE) {
         throw new ApiError(400, "Premium payment can only be made for active policies.");
     }
 
+    // check if premium amount matches policy premium amount
+    if (Number(amount) !== Number(policy.premiumAmount)) {
+        throw new ApiError(400, "Premium amount must match policy premium amount.");
+    }
+
+    // check if there is already a pending payment for this policy
     const existingPendingPayment = await prisma.premiumPayment.findFirst({
         where: {
             policyId,
@@ -38,11 +46,31 @@ paymentService.createPayment = async ({
         select: {
             id: true,
         },
-    });
+    })
 
     if (existingPendingPayment) {
         throw new ApiError(409, "A pending payment already exists for this policy.");
     }
+
+    // Generate unique transaction Id
+    let transactionId;
+    let attempt = 0;
+
+    do {
+        transactionId = generateTransactionId();
+        attempt++;
+
+        if (attempt > 5) {
+            throw new ApiError(500, "Failed to generate unique transaction Id.");
+        }
+    } while (await prisma.premiumPayment.findUnique({
+        where: {
+            transactionId,
+        },
+        select: {
+            id: true,
+        },
+    }))
 
     return await prisma.premiumPayment.create({
         data: {
@@ -51,6 +79,7 @@ paymentService.createPayment = async ({
             paymentDate,
             paymentMethod,
             transactionId,
+            status,
         },
     });
 };
@@ -97,28 +126,7 @@ paymentService.getPaymentById = async (paymentId) => {
     return payment;
 };
 
-paymentService.updatePayment = async (paymentId, payload) => {
-    const payment = await prisma.premiumPayment.findUnique({
-        where: {
-            id: paymentId,
-        },
-    });
 
-    if (!payment) {
-        throw new ApiError(404, "Payment not found.");
-    }
-
-    if (payload.amount) {
-        payload.amount = new Prisma.Decimal(payload.amount);
-    }
-
-    return await prisma.premiumPayment.update({
-        where: {
-            id: paymentId,
-        },
-        data: payload,
-    });
-};
 
 paymentService.deletePayment = async (paymentId) => {
     const payment = await prisma.premiumPayment.findUnique({
@@ -163,4 +171,65 @@ paymentService.getPolicyPayments = async (policyId) => {
             paymentDate: "desc",
         },
     });
+};
+
+paymentService.customerPay = async (userId, { policyId, paymentMethod }) => {
+    const customer = await prisma.customer.findUnique({
+        where: { userId },
+    });
+
+    if (!customer) {
+        throw new ApiError(404, "Customer profile not found.");
+    }
+
+    const policy = await prisma.policy.findUnique({
+        where: { id: policyId },
+    });
+
+    if (!policy) {
+        throw new ApiError(404, "Policy not found.");
+    }
+
+    if (policy.customerId !== customer.id) {
+        throw new ApiError(403, "You are not authorized to pay for this policy.");
+    }
+
+    if (policy.status !== PolicyStatus.APPROVED && policy.status !== PolicyStatus.ACTIVE) {
+        throw new ApiError(400, "Premium payment can only be made for approved or active policies.");
+    }
+
+    let transactionId;
+    let attempt = 0;
+
+    do {
+        transactionId = generateTransactionId();
+        attempt++;
+
+        if (attempt > 5) {
+            throw new ApiError(500, "Failed to generate unique transaction Id.");
+        }
+    } while (await prisma.premiumPayment.findUnique({
+        where: { transactionId },
+        select: { id: true },
+    }));
+
+    const payment = await prisma.premiumPayment.create({
+        data: {
+            policyId,
+            amount: policy.premiumAmount,
+            paymentDate: new Date(),
+            paymentMethod,
+            transactionId,
+            status: PaymentStatus.PAID,
+        },
+    });
+
+    if (policy.status === PolicyStatus.APPROVED) {
+        await prisma.policy.update({
+            where: { id: policyId },
+            data: { status: PolicyStatus.ACTIVE },
+        });
+    }
+
+    return payment;
 };

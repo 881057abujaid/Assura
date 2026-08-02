@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import prisma from "../lib/prisma.js";
 import ApiError from "../utils/ApiError.js";
+import { Role } from "@prisma/client";
 
 export const userService = {};
 
@@ -9,6 +10,9 @@ userService.getCurrentUser = async (userId) => {
     const user = await prisma.user.findUnique({
         where: {
             id: userId,
+        },
+        include: {
+            customer: true,
         },
         omit: {
             password: true,
@@ -110,3 +114,29 @@ userService.changePassword = async ({ userId, oldPassword, newPassword, confirmP
 
     return;
 }
+
+userService.getUnassignedUsers = async () => {
+    return await prisma.user.findMany({
+        where: {
+            role: "CUSTOMER",
+            customer: null
+        },
+        select: {
+            id: true,
+            email: true
+        }
+    });
+};
+
+userService.getAgents = async () => {
+    return await prisma.user.findMany({
+        where: {
+            role: Role.AGENT
+        },
+        select: {
+            id: true,
+            email: true,
+            role: true
+        }
+    });
+};

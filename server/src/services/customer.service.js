@@ -1,59 +1,72 @@
 import ApiError from "../utils/ApiError.js";
 import prisma from "../lib/prisma.js";
 
+import bcrypt from "bcryptjs";
+
 export const customerService = {};
 
 customerService.createCustomer = async (data) => {
     // Destructure the data
-    const { userId, fullName, phone, dob, gender, address, city, state, country, postalCode } = data;
+    const { email, password, fullName, phone, dob, gender, address, city, state, country, postalCode } = data;
 
-    // Check if the user exists
-    const user = await prisma.user.findUnique({
-        where: {
-            id: userId,
-        },
-    });
-
-    if (!user) {
-        throw new ApiError(404, "User not found");
+    if (!email || !password) {
+        throw new ApiError(400, "Email and password are required to create a customer account.");
     }
 
-    // Check if the customer already exists
-    const existingCustomer = await prisma.customer.findUnique({
-        where: {
-            userId,
-        },
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+        where: { email }
     });
 
-    if (existingCustomer) {
-        throw new ApiError(409, "Customer already exists");
+    if (existingUser) {
+        throw new ApiError(409, "User with this email is already registered.");
     }
 
-    // Check if phone number already exists
-    const existingPhone = await prisma.customer.findUnique({
-        where: {
-            phone,
-        },
-    });
-
-    if (existingPhone) {
-        throw new ApiError(409, "Phone number already exists");
+    if (phone) {
+        // Check if phone number already exists
+        const existingPhone = await prisma.customer.findUnique({
+            where: { phone }
+        });
+        if (existingPhone) {
+            throw new ApiError(409, "Phone number already exists");
+        }
     }
 
-    // Create the customer
-    const customer = await prisma.customer.create({
-        data: {
-            userId,
-            fullName,
-            phone,
-            dob,
-            gender,
-            address,
-            city,
-            state,
-            country,
-            postalCode,
-        },
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const isCompleted = ["phone", "dob", "gender", "address", "city", "state", "country", "postalCode"]
+        .every(field => data[field] !== undefined && data[field] !== null && data[field] !== "");
+
+    // Create the customer and user transactionally
+    const customer = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+            data: {
+                email,
+                password: hashedPassword,
+                role: "CUSTOMER",
+                status: "ACTIVE"
+            }
+        });
+
+        const createdCustomer = await tx.customer.create({
+            data: {
+                userId: user.id,
+                fullName,
+                phone: phone || null,
+                dob: dob ? new Date(dob) : null,
+                gender: gender || null,
+                address: address || null,
+                city: city || null,
+                state: state || null,
+                country: country || null,
+                postalCode: postalCode || null,
+                profileCompleted: isCompleted,
+                profileCompletedAt: isCompleted ? new Date() : null
+            }
+        });
+
+        return createdCustomer;
     });
 
     return customer;
@@ -62,8 +75,20 @@ customerService.createCustomer = async (data) => {
 customerService.getAllCustomers = async () => {
     // Fetch all customers
     const customers = await prisma.customer.findMany({
+        where: {
+            user: {
+                role: "CUSTOMER"
+            }
+        },
         include: {
-            user: true
+            user: {
+                select: {
+                    id: true,
+                    email: true,
+                    role: true,
+                    status: true,
+                },
+            },
         },
         orderBy: { createdAt: "desc" },
     });
@@ -119,22 +144,97 @@ customerService.updateCustomer = async (data) => {
         }
     }
 
-    // Update the customer
+    // Build updateData only with defined (non-undefined) fields to avoid overwriting existing values
+    const updateData = {};
+    if (fullName !== undefined) updateData.fullName = fullName;
+    if (phone !== undefined) updateData.phone = phone;
+    if (dob !== undefined) updateData.dob = dob ? new Date(dob) : null;
+    if (gender !== undefined) updateData.gender = gender;
+    if (address !== undefined) updateData.address = address;
+    if (city !== undefined) updateData.city = city;
+    if (state !== undefined) updateData.state = state;
+    if (country !== undefined) updateData.country = country;
+    if (postalCode !== undefined) updateData.postalCode = postalCode;
+
+    // Merge existing values with the new update to determine profileCompleted
+    const merged = { ...existingCustomer, ...updateData };
+    const isCompleted = ["phone", "dob", "gender", "address", "city", "state", "country", "postalCode"]
+        .every(field => merged[field] !== undefined && merged[field] !== null && merged[field] !== "");
+
+    if (isCompleted) {
+        updateData.profileCompleted = true;
+        if (!existingCustomer.profileCompleted) {
+            updateData.profileCompletedAt = new Date();
+        }
+    } else {
+        updateData.profileCompleted = false;
+        updateData.profileCompletedAt = null;
+    }
+
     const updatedCustomer = await prisma.customer.update({
         where: {
             id: customerId,
         },
-        data: {
-            fullName,
-            phone,
-            dob,
-            gender,
-            address,
-            city,
-            state,
-            country,
-            postalCode,
+        data: updateData,
+    });
+
+    return updatedCustomer;
+};
+
+customerService.completeProfile = async (userId, data) => {
+    // Check if customer profile exists for this user
+    const existingCustomer = await prisma.customer.findUnique({
+        where: {
+            userId,
         },
+    });
+
+    if (!existingCustomer) {
+        throw new ApiError(404, "Customer profile not found for this user.");
+    }
+
+    const { phone, dob, gender, address, city, state, country, postalCode } = data;
+
+    // Check if phone number updating
+    if (phone && phone !== existingCustomer.phone) {
+        const existingPhone = await prisma.customer.findUnique({
+            where: {
+                phone,
+            },
+        });
+
+        if (existingPhone) {
+            throw new ApiError(409, "Phone number already exists");
+        }
+    }
+
+    const updateData = {
+        phone,
+        dob: dob ? new Date(dob) : undefined,
+        gender,
+        address,
+        city,
+        state,
+        country,
+        postalCode,
+    };
+
+    const merged = { ...existingCustomer, ...updateData };
+    const isCompleted = ["phone", "dob", "gender", "address", "city", "state", "country", "postalCode"]
+        .every(field => merged[field] !== undefined && merged[field] !== null && merged[field] !== "");
+
+    if (isCompleted) {
+        updateData.profileCompleted = true;
+        if (!existingCustomer.profileCompleted) {
+            updateData.profileCompletedAt = new Date();
+        }
+    }
+
+    const updatedCustomer = await prisma.customer.update({
+        where: {
+            userId,
+        },
+        data: updateData,
     });
 
     return updatedCustomer;
@@ -173,4 +273,30 @@ customerService.deleteCustomer = async (customerId) => {
     });
 
     return deletedCustomer;
+};
+
+customerService.getMyProfile = async (userId) => {
+    const customer = await prisma.customer.findUnique({
+        where: { userId },
+        include: {
+            policies: {
+                include: {
+                    policyType: true,
+                    assignedAgent: { select: { id: true, email: true } },
+                    claims: true,
+                    premiumPayments: true,
+                },
+                orderBy: { createdAt: 'desc' },
+            },
+            documents: {
+                orderBy: { createdAt: 'desc' },
+            },
+        },
+    });
+
+    if (!customer) {
+        throw new ApiError(404, "Customer profile not found.");
+    }
+
+    return customer;
 };

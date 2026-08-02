@@ -78,3 +78,25 @@ export const updatePolicySchema = z.object({
             value => value !== undefined),
         { message: "At least one field is required" }
     )
+
+export const applyPolicySchema = z.object({
+    policyTypeId: z
+        .uuid("Invalid policy type ID"),
+
+    startDate: z
+        .coerce.date("Invalid start date"),
+
+    endDate: z
+        .coerce.date("Invalid end date"),
+
+    description: z
+        .string()
+        .trim()
+        .max(500, "Description must be at most 500 characters")
+        .optional(),
+}).refine((data) => {
+    if (data.startDate && data.endDate) {
+        return data.endDate > data.startDate;
+    }
+    return true;
+}, { message: "End date must be after start date", path: ["endDate"] });

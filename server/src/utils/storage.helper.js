@@ -4,16 +4,20 @@ import env from "../config/env.js";
 
 const bucket = env.SUPABASE_STORAGE_BUCKET;
 
-export const uploadFile = async (buffer, storagePath, mimetype) => {
+export const uploadFile = async ({
+    buffer,
+    storagePath,
+    mimeType,
+}) => {
     const { error } = await supabase.storage
         .from(bucket)
         .upload(storagePath, buffer, {
-            contentType: mimetype,
+            contentType: mimeType,
             upsert: false,
         });
 
     if (error) {
-        throw new ApiError(500, "Failed to upload file.");
+        throw new ApiError(500, error.message);
     }
 
     const { data } = supabase.storage

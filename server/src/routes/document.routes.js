@@ -8,13 +8,18 @@ import {
 import { verifyJWT, authorizeRoles } from "../middlewares/auth.middleware.js";
 import validate from "../middlewares/validate.middleware.js";
 import { upload } from "../middlewares/upload.middleware.js";
+import { Role } from "@prisma/client";
+
+import { requireCompletedProfile } from "../middlewares/profile.middleware.js";
 
 const router = Router();
 
+router.use(verifyJWT);
+router.use(requireCompletedProfile);
+
 router.post(
     "/",
-    verifyJWT,
-    authorizeRoles("AGENT", "ADMIN"),
+    authorizeRoles(Role.AGENT, Role.ADMIN, Role.CUSTOMER),
     upload.single("document"),
     validate(uploadDocumentSchema),
     documentController.uploadDocument
@@ -22,28 +27,26 @@ router.post(
 
 router.get(
     "/:documentId",
-    verifyJWT,
-    validate(getDocumentByIdSchema),
+    validate(getDocumentByIdSchema, "params"),
     documentController.getDocumentById
 );
 
 router.get(
     "/customers/:customerId",
-    verifyJWT,
+    authorizeRoles(Role.AGENT, Role.ADMIN, Role.CUSTOMER),
     documentController.getCustomerDocuments
 );
 
 router.get(
     "/claims/:claimId",
-    verifyJWT,
+    authorizeRoles(Role.AGENT, Role.ADMIN, Role.CUSTOMER),
     documentController.getClaimDocuments
 );
 
 router.delete(
     "/:documentId",
-    verifyJWT,
-    authorizeRoles("ADMIN"),
-    validate(deleteDocumentSchema),
+    authorizeRoles(Role.ADMIN),
+    validate(deleteDocumentSchema, "params"),
     documentController.deleteDocument
 );
 

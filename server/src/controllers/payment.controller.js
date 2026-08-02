@@ -42,19 +42,7 @@ paymentController.getPaymentById = asyncHandler(async (req, res) => {
     );
 });
 
-paymentController.updatePayment = asyncHandler(async (req, res) => {
-    const { paymentId } = req.params;
 
-    const payment = await paymentService.updatePayment(paymentId, req.body);
-
-    return res.status(200).json(
-        new ApiResponse(
-            200,
-            "Payment updated successfully.",
-            payment,
-        )
-    );
-});
 
 paymentController.deletePayment = asyncHandler(async (req, res) => {
     const { paymentId } = req.params;
@@ -80,6 +68,18 @@ paymentController.getPolicyPayments = asyncHandler(async (req, res) => {
             200,
             "Policy payments retrieved successfully.",
             payments,
+        )
+    );
+});
+
+paymentController.customerPay = asyncHandler(async (req, res) => {
+    const payment = await paymentService.customerPay(req.user.id, req.body);
+
+    return res.status(201).json(
+        new ApiResponse(
+            201,
+            "Premium payment completed successfully.",
+            payment,
         )
     );
 });

@@ -5,7 +5,7 @@ import { claimService } from "../services/claim.service.js";
 export const claimController = {};
 
 claimController.createClaim = asyncHandler(async (req, res) => {
-    const claim = await claimService.createClaim(req.body);
+    const claim = await claimService.createClaim(req.body, req.user.id, req.user.role);
 
     return res.status(201).json(
         new ApiResponse(
@@ -17,7 +17,7 @@ claimController.createClaim = asyncHandler(async (req, res) => {
 });
 
 claimController.getAllClaims = asyncHandler(async (req, res) => {
-    const claims = await claimService.getAllClaims();
+    const claims = await claimService.getAllClaims(req.user.id, req.user.role);
 
     return res.status(200).json(
         new ApiResponse(
@@ -31,7 +31,7 @@ claimController.getAllClaims = asyncHandler(async (req, res) => {
 claimController.getClaimById = asyncHandler(async (req, res) => {
     const { claimId } = req.params;
 
-    const claim = await claimService.getClaimById(claimId);
+    const claim = await claimService.getClaimById(claimId, req.user.id, req.user.role);
 
     return res.status(200).json(
         new ApiResponse(

@@ -4,13 +4,24 @@ import { verifyJWT, authorizeRoles } from "../middlewares/auth.middleware.js";
 import validate from "../middlewares/validate.middleware.js";
 import {
     createPolicySchema,
-    updatePolicySchema
+    updatePolicySchema,
+    applyPolicySchema
 } from "../validators/policy.validator.js";
 import { Role } from "@prisma/client";
+
+import { requireCompletedProfile } from "../middlewares/profile.middleware.js";
 
 const router = Router();
 
 router.use(verifyJWT);
+router.use(requireCompletedProfile);
+
+router.post(
+    "/apply",
+    authorizeRoles(Role.CUSTOMER),
+    validate(applyPolicySchema),
+    policyController.applyPolicy
+);
 
 router.post(
     "/",

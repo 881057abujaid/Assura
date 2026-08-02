@@ -1,3 +1,4 @@
+import { Role } from "@prisma/client";
 import prisma from "../lib/prisma.js";
 import ApiError from "../utils/ApiError.js";
 import { generateStoragePath } from "../utils/generateStoragePath.js";
@@ -5,7 +6,33 @@ import { uploadFile, deleteFile } from "../utils/storage.helper.js";
 
 export const documentService = {};
 
-documentService.uploadDocument = async ({ file, customerId, claimId }) => {
+documentService.uploadDocument = async ({ file, customerId, claimId }, userId, userRole) => {
+    if (userRole === Role.CUSTOMER) {
+        const customer = await prisma.customer.findUnique({
+            where: { userId },
+            select: { id: true },
+        });
+
+        if (!customer) {
+            throw new ApiError(403, "Forbidden.");
+        }
+
+        if (customerId && customerId !== customer.id) {
+            throw new ApiError(403, "You can only upload documents to your own profile.");
+        }
+
+        if (claimId) {
+            const claim = await prisma.claim.findUnique({
+                where: { id: claimId },
+                select: { policy: { select: { customerId: true } } },
+            });
+
+            if (!claim || claim.policy?.customerId !== customer.id) {
+                throw new ApiError(403, "You can only upload documents to your own claim.");
+            }
+        }
+    }
+
     if (customerId) {
         const customer = await prisma.customer.findUnique({
             where: { id: customerId },
@@ -65,13 +92,7 @@ documentService.getDocumentById = async (documentId) => {
     const document = await prisma.document.findUnique({
         where: { id: documentId },
         include: {
-            customer: {
-                select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                },
-            },
+            customer: true,
             claim: {
                 select: {
                     id: true,
@@ -89,7 +110,18 @@ documentService.getDocumentById = async (documentId) => {
     return document;
 };
 
-documentService.getCustomerDocuments = async (customerId) => {
+documentService.getCustomerDocuments = async (customerId, userId, userRole) => {
+    if (userRole === Role.CUSTOMER) {
+        const customer = await prisma.customer.findUnique({
+            where: { userId },
+            select: { id: true },
+        });
+
+        if (!customer || customerId !== customer.id) {
+            throw new ApiError(403, "Forbidden.");
+        }
+    }
+
     const customer = await prisma.customer.findUnique({
         where: { id: customerId },
         select: {
@@ -109,7 +141,22 @@ documentService.getCustomerDocuments = async (customerId) => {
     });
 };
 
-documentService.getClaimDocuments = async (claimId) => {
+documentService.getClaimDocuments = async (claimId, userId, userRole) => {
+    if (userRole === Role.CUSTOMER) {
+        const customer = await prisma.customer.findUnique({
+            where: { userId },
+            select: { id: true },
+        });
+
+        const claim = await prisma.claim.findUnique({
+            where: { id: claimId },
+            select: { policy: { select: { customerId: true } } },
+        });
+
+        if (!customer || !claim || claim.policy?.customerId !== customer.id) {
+            throw new ApiError(403, "Forbidden.");
+        }
+    }
     const claim = await prisma.claim.findUnique({
         where: { id: claimId },
         select: { id: true },

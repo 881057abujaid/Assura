@@ -26,43 +26,26 @@ export const createPaymentSchema = z.object({
             error: "Invalid payment method.",
         }
     ),
-
-    transactionId: z
-        .string()
-        .trim()
-        .optional(),
 });
 
-export const updatePaymentSchema = z.object({
-    amount: z
-        .coerce
-        .number("Amount must be a number.")
-        .positive("Amount must be greater than 0.")
-        .optional(),
+export const customerPaySchema = z.object({
+    policyId: z
+        .uuid("Invalid policy ID."),
 
-    paymentDate: z
-        .coerce
-        .date()
-        .optional(),
-
-    paymentMethod: z
-        .enum([
+    paymentMethod: z.enum(
+        [
             PaymentMethod.CASH,
             PaymentMethod.UPI,
             PaymentMethod.CARD,
             PaymentMethod.NET_BANKING
-        ])
-        .optional(),
-
-    transactionId: z
-        .string()
-        .trim()
-        .optional(),
-
-    status: z
-        .enum([PaymentStatus.PENDING, PaymentStatus.PAID, PaymentStatus.OVERDUE])
-        .optional(),
+        ],
+        {
+            error: "Invalid payment method.",
+        }
+    ),
 });
+
+
 
 export const getPaymentByIdSchema = z.object({
     paymentId: z

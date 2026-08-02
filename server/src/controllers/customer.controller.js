@@ -72,3 +72,28 @@ customerController.deleteCustomer = asyncHandler(async (req, res) => {
         )
     );
 });
+
+customerController.completeProfile = asyncHandler(async (req, res) => {
+    const customer = await customerService.completeProfile(req.user.id, req.body);
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            "Profile completed successfully",
+            customer,
+        )
+    );
+});
+
+// Customer fetches their own full profile: policies (with claims) + documents
+customerController.getMyProfile = asyncHandler(async (req, res) => {
+    const data = await customerService.getMyProfile(req.user.id);
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            "Customer profile fetched successfully",
+            data,
+        )
+    );
+});

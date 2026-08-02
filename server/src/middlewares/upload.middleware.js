@@ -3,14 +3,14 @@ import ApiError from "../utils/ApiError.js";
 
 const storage = multer.memoryStorage();
 
-const allowedMimTypes = [
+const allowedMimeTypes = [
     "application/pdf",
     "image/jpeg",
     "image/png",
 ];
 
 const fileFilter = (req, file, cb) => {
-    if (!allowedMimTypes.includes(file.mimetype)) {
+    if (!allowedMimeTypes.includes(file.mimetype)) {
         return cb(
             new ApiError(400, "Only PDF, JPG and PNG files are allowed.")
         )
