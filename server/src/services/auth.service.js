@@ -11,7 +11,7 @@ import {
 
 export const authService = {};
 
-authService.register = async ({ email, password }) => {
+authService.register = async ({ email, password, fullName }) => {
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
         where: {
@@ -26,21 +26,33 @@ authService.register = async ({ email, password }) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-    const user = await prisma.user.create({
-        data: {
-            email,
-            password: hashedPassword,
-            role: Role.CUSTOMER,
-        },
-        select: {
-            id: true,
-            email: true,
-            role: true,
-            status: true,
-            lastLoginAt: true,
-            createdAt: true
-        }
+    // Create user and customer profile inside a transaction
+    const user = await prisma.$transaction(async (tx) => {
+        const createdUser = await tx.user.create({
+            data: {
+                email,
+                password: hashedPassword,
+                role: Role.CUSTOMER,
+            },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                status: true,
+                lastLoginAt: true,
+                createdAt: true
+            }
+        });
+
+        await tx.customer.create({
+            data: {
+                userId: createdUser.id,
+                fullName: fullName || "Valued Customer",
+                profileCompleted: false
+            }
+        });
+
+        return createdUser;
     });
 
     return user;
@@ -91,6 +103,9 @@ authService.login = async ({ email, password }) => {
         where: {
             id: user.id,
         },
+        include: {
+            customer: true,
+        },
         omit: {
             password: true,
             refreshToken: true,
@@ -129,6 +144,9 @@ authService.refreshAccessToken = async (refreshToken) => {
     const user = await prisma.user.findUnique({
         where: {
             id: decoded.id,
+        },
+        include: {
+            customer: true,
         },
         omit: {
             password: true,

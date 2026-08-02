@@ -6,12 +6,21 @@ export const documentController = {};
 
 documentController.uploadDocument = asyncHandler(async (req, res) => {
     const { customerId, claimId } = req.body;
+    const file = req.file;
 
-    const document = await documentService.uploadDocument({
-        file: req.file,
-        customerId,
-        claimId,
-    });
+    if (!file) {
+        throw new ApiError(400, "File is required.");
+    }
+
+    const document = await documentService.uploadDocument(
+        {
+            file: req.file,
+            customerId,
+            claimId,
+        },
+        req.user.id,
+        req.user.role
+    );
 
     return res.status(201).json(
         new ApiResponse(
@@ -25,7 +34,7 @@ documentController.uploadDocument = asyncHandler(async (req, res) => {
 documentController.getDocumentById = asyncHandler(async (req, res) => {
     const { documentId } = req.params;
 
-    const document = await documentService.getDocumentById(documentId);
+    const document = await documentService.getDocumentById(documentId, req.user.id, req.user.role);
 
     return res.status(200).json(
         new ApiResponse(
@@ -39,7 +48,7 @@ documentController.getDocumentById = asyncHandler(async (req, res) => {
 documentController.getCustomerDocuments = asyncHandler(async (req, res) => {
     const { customerId } = req.params;
 
-    const documents = await documentService.getCustomerDocuments(customerId);
+    const documents = await documentService.getCustomerDocuments(customerId, req.user.id, req.user.role);
 
     return res.status(200).json(
         new ApiResponse(
@@ -53,7 +62,7 @@ documentController.getCustomerDocuments = asyncHandler(async (req, res) => {
 documentController.getClaimDocuments = asyncHandler(async (req, res) => {
     const { claimId } = req.params;
 
-    const documents = await documentService.getClaimDocuments(claimId);
+    const documents = await documentService.getClaimDocuments(claimId, req.user.id, req.user.role);
 
     return res.status(200).json(
         new ApiResponse(

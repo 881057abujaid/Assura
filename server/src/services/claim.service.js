@@ -5,7 +5,7 @@ import ApiError from "../utils/ApiError.js";
 
 export const claimService = {};
 
-claimService.createClaim = async (data) => {
+claimService.createClaim = async (data, userId, userRole) => {
     // Destructure the data
     const {
         policyId,
@@ -21,6 +21,8 @@ claimService.createClaim = async (data) => {
         select: {
             id: true,
             status: true,
+            coverageAmount: true,
+            customerId: true,
         },
     });
 
@@ -28,9 +30,51 @@ claimService.createClaim = async (data) => {
         throw new ApiError(404, "Policy not found.");
     }
 
+    // Ownership check for customers
+    if (userRole === Role.CUSTOMER) {
+        const customer = await prisma.customer.findUnique({
+            where: { userId },
+            select: { id: true },
+        });
+
+        if (!customer || policy.customerId !== customer.id) {
+            throw new ApiError(403, "You can only file claims for your own policies.");
+        }
+    }
+
     // Check policy status
     if (policy.status !== PolicyStatus.ACTIVE) {
         throw new ApiError(400, "claims can only be created for active policies.");
+    }
+
+    // Check claim amount
+    if (claimAmount > policy.coverageAmount) {
+        throw new ApiError(
+            400,
+            `Claim amount cannot exceed coverage amount. Maximum claim amount is $${policy.coverageAmount.toFixed(2)}`
+        );
+    }
+
+    // Calculate total claimed amount
+    const totalClaimedAmount = await prisma.claim.aggregate({
+        where: {
+            policyId,
+            status: ClaimStatus.APPROVED,
+        },
+        _sum: {
+            claimAmount: true,
+        },
+    });
+
+    // Calculate remaining coverage
+    const remainingCoverage = policy.coverageAmount - (totalClaimedAmount._sum.claimAmount || 0);
+
+    // Check if claim amount exceeds remaining coverage
+    if (claimAmount > remainingCoverage) {
+        throw new ApiError(
+            400,
+            `Claim amount exceeds remaining coverage. Remaining coverage: $${remainingCoverage.toFixed(2)}`
+        );
     }
 
     // Check existing pending claim
@@ -75,15 +119,35 @@ claimService.createClaim = async (data) => {
     return claim;
 };
 
-claimService.getAllClaims = async () => {
-    // Fetch all claims
+claimService.getAllClaims = async (userId, userRole) => {
+    let whereClause = {};
+
+    if (userRole === Role.CUSTOMER) {
+        const customer = await prisma.customer.findUnique({
+            where: { userId },
+            select: { id: true },
+        });
+
+        if (!customer) {
+            return [];
+        }
+
+        whereClause = {
+            policy: {
+                customerId: customer.id,
+            },
+        };
+    }
+
     const claims = await prisma.claim.findMany({
+        where: whereClause,
         include: {
             policy: {
                 select: {
                     id: true,
                     policyNumber: true,
                     status: true,
+                    customerId: true,
                 },
             },
             reviewer: {
@@ -103,7 +167,7 @@ claimService.getAllClaims = async () => {
     return claims;
 };
 
-claimService.getClaimById = async (claimId) => {
+claimService.getClaimById = async (claimId, userId, userRole) => {
     // validate claimId
     if (!claimId) {
         throw new ApiError(400, "Claim ID is required.");
@@ -120,6 +184,7 @@ claimService.getClaimById = async (claimId) => {
                     id: true,
                     policyNumber: true,
                     status: true,
+                    customerId: true,
                 },
             },
             reviewer: {
@@ -135,6 +200,17 @@ claimService.getClaimById = async (claimId) => {
 
     if (!claim) {
         throw new ApiError(404, "Claim not found.");
+    }
+
+    if (userRole === Role.CUSTOMER) {
+        const customer = await prisma.customer.findUnique({
+            where: { userId },
+            select: { id: true },
+        });
+
+        if (!customer || claim.policy?.customerId !== customer.id) {
+            throw new ApiError(403, "You are not authorized to view this claim.");
+        }
     }
 
     return claim;

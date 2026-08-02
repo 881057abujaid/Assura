@@ -8,10 +8,10 @@ const BUTTON_BASE_STYLES =
 
 const BUTTON_VARIANTS = {
   primary:
-    "bg-primary text-white hover:bg-primary/95 focus-visible:ring-primary",
+    "bg-gradient-to-r from-violet-600 to-cyan-500 text-white hover:opacity-95 transition-all duration-150 focus-visible:ring-violet-500 shadow-md shadow-violet-950/20 hover:shadow-violet-900/30",
 
   secondary:
-    "bg-bg-base border border-border-custom text-text-primary hover:bg-surface hover:border-slate-300 focus-visible:ring-primary",
+    "bg-bg-base border border-border-custom text-text-primary hover:bg-surface hover:border-primary/50 transition-all duration-150 focus-visible:ring-primary",
 
   danger:
     "bg-error text-white hover:bg-error/95 focus-visible:ring-error",

@@ -1,24 +1,46 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-hot-toast";
 
-import { Button, Input } from "../../../components/ui";
+import { Button, Input, Alert } from "../../../components/ui";
 
+import { useRegister } from "../hooks/useRegister";
+import { registerSchema } from "../validations/auth.validation";
 import AuthCard from "../components/AuthCard";
 import AuthHeader from "../components/AuthHeader";
 import AuthLayout from "../components/AuthLayout";
 
 function RegisterPage() {
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const { register: signup, loading, error } = useRegister();
+  const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
 
-    // Registration logic will be implemented
-    // in a future milestone.
+  const onSubmit = async (data) => {
+    try {
+      await signup(data);
+      toast.success("Account created successfully!");
+      navigate("/login");
+    } catch {
+      // Error is already handled by the hook and displayed inline via Alert
+    }
   };
+
+
+
 
   return (
     <AuthLayout>
@@ -29,18 +51,25 @@ function RegisterPage() {
 
       <AuthCard className="mt-8">
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           noValidate
           className="space-y-6"
         >
+          {error && (
+            <Alert variant="error">
+              {error}
+            </Alert>
+          )}
+
           <div className="space-y-4">
             <Input
               type="text"
               label="Full Name"
               placeholder="John Doe"
               autoComplete="name"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
+              error={errors.fullName?.message}
+              disabled={loading}
+              {...register("fullName")}
             />
 
             <Input
@@ -48,8 +77,9 @@ function RegisterPage() {
               label="Email Address"
               placeholder="you@example.com"
               autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              error={errors.email?.message}
+              disabled={loading}
+              {...register("email")}
             />
 
             <Input
@@ -57,8 +87,9 @@ function RegisterPage() {
               label="Password"
               placeholder="••••••••"
               autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              error={errors.password?.message}
+              disabled={loading}
+              {...register("password")}
             />
 
             <Input
@@ -66,13 +97,15 @@ function RegisterPage() {
               label="Confirm Password"
               placeholder="••••••••"
               autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
+              error={errors.confirmPassword?.message}
+              disabled={loading}
+              {...register("confirmPassword")}
             />
           </div>
 
           <Button
             type="submit"
+            loading={loading}
             className="w-full"
           >
             Create Account
@@ -93,4 +126,4 @@ function RegisterPage() {
   );
 }
 
-export default RegisterPage;
+export default RegisterPage;

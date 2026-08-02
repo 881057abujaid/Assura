@@ -1,22 +1,47 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-hot-toast";
 
-import { Button, Input } from "../../../components/ui";
+import { Button, Input, Alert } from "../../../components/ui";
 
+import { useResetPassword } from "../hooks/useResetPassword";
+import { resetPasswordSchema } from "../validations/auth.validation";
 import AuthCard from "../components/AuthCard";
 import AuthHeader from "../components/AuthHeader";
 import AuthLayout from "../components/AuthLayout";
 
 function ResetPasswordPage() {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const { resetPassword, loading, error } = useResetPassword();
+  const [success, setSuccess] = useState("");
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
 
-    // Password reset functionality
-    // will be implemented in a future milestone.
+  const onSubmit = async (data) => {
+    setSuccess("");
+    try {
+      const res = await resetPassword(data);
+      const message = res.message || "Password reset successfully.";
+      setSuccess(message);
+      toast.success(message);
+    } catch {
+      // Error is already handled by the hook and displayed inline via Alert
+    }
   };
+
+
+
 
   return (
     <AuthLayout>
@@ -27,49 +52,79 @@ function ResetPasswordPage() {
 
       <AuthCard className="mt-8">
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           noValidate
           className="space-y-6"
         >
-          <div className="space-y-4">
-            <Input
-              type="password"
-              label="New Password"
-              placeholder="••••••••"
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
+          {error && (
+            <Alert variant="error">
+              {error}
+            </Alert>
+          )}
 
-            <Input
-              type="password"
-              label="Confirm New Password"
-              placeholder="••••••••"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-            />
-          </div>
+          {success && (
+            <div className="space-y-4">
+              <Alert variant="success">
+                {success}
+              </Alert>
+              
+              <div className="text-center">
+                <Link
+                  to="/login"
+                  className="inline-block text-sm font-semibold text-primary transition-colors hover:text-primary/80"
+                >
+                  Go to Sign In
+                </Link>
+              </div>
+            </div>
+          )}
 
-          <Button
-            type="submit"
-            className="w-full"
-          >
-            Reset Password
-          </Button>
+          {!success && (
+            <>
+              <div className="space-y-4">
+                <Input
+                  type="password"
+                  label="New Password"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  error={errors.password?.message}
+                  disabled={loading}
+                  {...register("password")}
+                />
 
-          <div className="text-center">
-            <Link
-              to="/login"
-              className="text-sm font-semibold text-primary transition-colors hover:text-primary/80"
-            >
-              Back to Sign In
-            </Link>
-          </div>
+                <Input
+                  type="password"
+                  label="Confirm New Password"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  error={errors.confirmPassword?.message}
+                  disabled={loading}
+                  {...register("confirmPassword")}
+                />
+              </div>
+
+              <Button
+                type="submit"
+                loading={loading}
+                className="w-full"
+              >
+                Reset Password
+              </Button>
+
+              <div className="text-center">
+                <Link
+                  to="/login"
+                  className="text-sm font-semibold text-primary transition-colors hover:text-primary/80"
+                >
+                  Back to Sign In
+                </Link>
+              </div>
+            </>
+          )}
         </form>
       </AuthCard>
     </AuthLayout>
   );
 }
 
-export default ResetPasswordPage;
+export default ResetPasswordPage;

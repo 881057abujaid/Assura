@@ -72,3 +72,15 @@ policyController.deletePolicy = asyncHandler(async (req, res) => {
         )
     );
 });
+
+policyController.applyPolicy = asyncHandler(async (req, res) => {
+    const policy = await policyService.applyPolicy(req.user.id, req.body);
+
+    return res.status(201).json(
+        new ApiResponse(
+            201,
+            "Policy application submitted successfully.",
+            policy
+        )
+    );
+});

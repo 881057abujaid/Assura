@@ -48,3 +48,27 @@ userController.changePassword = asyncHandler(async (req, res) => {
         )
     );
 });
+
+userController.getUnassignedUsers = asyncHandler(async (req, res) => {
+    const users = await userService.getUnassignedUsers();
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            "Unassigned users retrieved successfully.",
+            users,
+        )
+    );
+});
+
+userController.getAgents = asyncHandler(async (req, res) => {
+    const agents = await userService.getAgents();
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            "Agents retrieved successfully.",
+            agents,
+        )
+    );
+});
