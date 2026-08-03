@@ -1,617 +1,153 @@
-# Assura Architecture
+# 🏗️ Assura System Architecture & Technical Specifications
 
-Version: 1.0
-
----
-
-# Introduction
-
-This document defines the architectural standards of Assura.
-
-Every feature, component, service and future contribution must follow this architecture.
-
-The goal is to build a scalable, maintainable and production-grade Insurance Management Platform.
-
-This architecture is considered the single source of truth.
+> **Version**: 2.0  
+> **Status**: Production-Grade / Active Implementation  
+> **Platform**: Enterprise Insurance Management Platform (MERN + Prisma ORM + PostgreSQL)
 
 ---
 
-# Core Principles
+## 📌 Architecture Overview
 
-The entire project follows these engineering principles.
-
-- KISS (Keep It Simple, Stupid)
-- DRY (Don't Repeat Yourself)
-- Feature Based Architecture
-- Backend Driven Frontend
-- Separation of Concerns
-- Single Responsibility Principle
-- Accessibility First
-- Reusability over Duplication
-- Production Ready Code
-
-Never sacrifice readability for cleverness.
-
----
-
-# High Level Architecture
+Assura is built following a clean, decoupled **Layered Architecture (MVC + Service Layer Pattern)** on the backend and a **Feature-Driven Architecture** on the frontend. The system enforces strict separation of concerns, single responsibility principles, and robust role-based access control (RBAC).
 
 ```
-
-```
-                 Browser
-                     │
-                     ▼
-              React Components
-                     │
-                     ▼
-               Feature Hooks
-                     │
-                     ▼
-             Feature Services
-                     │
-                     ▼
-               Axios Instance
-                     │
-                     ▼
-                Backend API
-                     │
-                     ▼
-                 PostgreSQL
-
-```
-
-```
-
-Each layer has a single responsibility.
-
-No layer should perform responsibilities belonging to another layer.
-
----
-
-# Project Structure
-
-```
-
-```
-src/
-
-assets/
-
-components/
-└── ui/
-
-features/
-├── auth/
-├── dashboard/
-├── users/
-├── policies/
-└── claims/
-
-layouts/
-
-routes/
-
-lib/
-
-utils/
-
-context/
-
-constants/
-
-```
-
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                      Client View Layer                          │
+ │      React 18 + Vite + Tailwind CSS v4 + Prismatic Theme        │
+ └────────────────────────────────┬────────────────────────────────┘
+                                  │
+                                  ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                     Client Service Layer                        │
+ │         Axios HTTP Client (Interceptors + Auth Storage)         │
+ └────────────────────────────────┬────────────────────────────────┘
+                                  │  REST API (JSON)
+                                  ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                      Express Controller                         │
+ │     Routing + Auth JWT Middleware + Zod Request Validation     │
+ └────────────────────────────────┬────────────────────────────────┘
+                                  │
+                                  ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                        Service Layer                            │
+ │     Business Logic + Ownership Verification + RBAC Validation   │
+ └────────────────────────────────┬────────────────────────────────┘
+                                  │
+                                  ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                          Prisma ORM                             │
+ │       Type-safe Data Access + Migration Engine + Models         │
+ └────────────────────────────────┬────────────────────────────────┘
+                                  │
+                                  ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                    PostgreSQL Database                          │
+ │         Supabase Relational Database Engine + Enums             │
+ └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-# Feature Based Architecture
+## 🔄 End-to-End Business Workflow Architecture
 
-Every feature is isolated.
-
-Example
+The application implements a realistic, state-driven insurance lifecycle across three distinct user roles:
 
 ```
-
-```
-auth/
-
-components/
-
-hooks/
-
-pages/
-
-services/
-
-validations/
-
-constants/
-
-utils/
-
-index.js
-
+[CUSTOMER]                    [AGENT]                    [CUSTOMER / SYSTEM]
+    │                            │                               │
+    ├─► 1. Apply for Policy ────►│                               │
+    │   (Status: PENDING)        │                               │
+    │   Auto-assign Agent        │                               │
+    │                            ├─► 2. Review Application       │
+    │                            │   Update Status: APPROVED     │
+    │                            │                               │
+    │                            │                               ├─► 3. Pay Premium
+    │                            │                               │   Auto-Activate: ACTIVE
+    │                            │                               │
+    ├─► 4. File Claim Request ──►│                               │
+    │   Upload Proof Document    ├─► 5. Review & Resolve Claim   │
+    │   (Status: PENDING)        │   (APPROVED / REJECTED)       │
 ```
 
-```
+### State Machines & Lifecycle Rules
 
-Features should not directly depend on each other.
+#### 1. Policy Status Lifecycle
+- **`PENDING`**: Customer submits policy application via `POST /api/v1/policies/apply`. System auto-assigns the first available `ACTIVE` Agent.
+- **`APPROVED`**: Agent/Admin reviews application details and updates status to `APPROVED` via `PATCH /api/v1/policies/:id/status`.
+- **`ACTIVE`**: Customer pays the initial premium via `POST /api/v1/payments/customer-pay`. Payment verification automatically transitions policy status to `ACTIVE`.
+- **`EXPIRED`**: Set automatically when current date exceeds `endDate`.
+- **`CANCELLED`**: Application rejected by Agent/Admin or policy terminated.
 
-Shared functionality belongs inside shared folders.
+#### 2. Claim Status Lifecycle
+- **`PENDING`**: Customer files claim for an `ACTIVE` owned policy via `POST /api/v1/claims`, optionally attaching supporting documents (`POST /api/v1/documents`).
+- **`APPROVED`**: Agent/Admin approves claim payout request after verifying documentation.
+- **`REJECTED`**: Claim denied with audit reason log.
+
+#### 3. Premium Payment Lifecycle
+- **`PAID`**: Payment records are **immutable** upon creation. Customers or Agents record payments via dedicated payment endpoints.
 
 ---
 
-# Layer Responsibilities
-
-## UI Layer
-
-Responsible for rendering only.
-
-Allowed
-
-- Rendering
-- Receiving props
-- Calling hooks
-- Event forwarding
-
-Not Allowed
-
-- API Calls
-- Business Logic
-- Data Transformation
-- Authentication Logic
-
----
-
-## Hook Layer
-
-Responsible for application behavior.
-
-Allowed
-
-- State Management
-- Loading
-- Error Handling
-- Calling Services
-- Navigation
-- Business Logic
-
-Not Allowed
-
-- Direct API implementation
-- UI rendering
-
----
-
-## Service Layer
-
-Responsible for backend communication.
-
-Allowed
-
-- HTTP Requests
-- Request Mapping
-- Response Mapping
-- Throw Errors
-
-Not Allowed
-
-- Navigation
-- Toasts
-- React State
-- UI Manipulation
-
----
-
-## Axios Layer
-
-Single shared HTTP client.
-
-Responsible for
-
-- Base URL
-- Authentication Headers
-- Interceptors
-- Request Configuration
-
-Business logic never belongs here.
-
----
-
-# Data Flow
-
-Every request follows exactly this flow.
+## 📁 Repository & Directory Structure
 
 ```
-
-```
-Component
-
-↓
-
-Hook
-
-↓
-
-Service
-
-↓
-
-Axios
-
-↓
-
-Backend
-
-↓
-
-Axios
-
-↓
-
-Service
-
-↓
-
-Hook
-
-↓
-
-Component
-
-```
-
-```
-
-Never skip layers.
-
----
-
-# Dependency Rules
-
-Allowed
-
-```
-
-```
-Component
-↓
-
-Hook
-↓
-
-Service
-↓
-
-Axios
-
-```
-
-```
-
-Forbidden
-
-```
-
-```
-Component → Axios
-
-Component → Backend
-
-Component → Database
-
-Hook → Database
-
-Service → UI
-
-```
-
+Assura/
+├── client/                      # Frontend Application (React + Vite)
+│   ├── src/
+│   │   ├── assets/              # Static assets (logo, brand media)
+│   │   ├── components/ui/       # Reusable UI Design System (Button, Card, Badge, ConfirmModal, etc.)
+│   │   ├── config/              # Routes and API configuration
+│   │   ├── context/             # Global AuthContext & session providers
+│   │   ├── features/            # Feature-Driven Modules
+│   │   │   ├── auth/            # Auth pages, services, validators
+│   │   │   ├── claims/          # Claims management & list views
+│   │   │   ├── customers/       # Customer profiles & self-service portal
+│   │   │   ├── dashboard/       # Executive MoM analytics dashboard
+│   │   │   ├── documents/       # Repository & upload management
+│   │   │   ├── payments/        # Premium payment collection ledger
+│   │   │   └── policy/          # Policies & policy types management
+│   │   ├── layouts/             # DashboardLayout with top header dropdown
+│   │   ├── lib/                 # Axios instance & localStorage manager
+│   │   └── styles/              # Global Tailwind CSS tokens
+│   ├── vercel.json              # Vercel SPA Routing Configuration
+│   └── package.json
+│
+└── server/                      # Backend REST API (Node + Express + Prisma)
+    ├── prisma/
+    │   └── schema.prisma        # PostgreSQL Data Models & Enums
+    ├── src/
+    │   ├── controllers/         # Express Request Handlers
+    │   ├── lib/                 # Prisma Client instance initialization
+    │   ├── middlewares/         # Auth JWT, Role RBAC, Error Handler, Upload
+    │   ├── routes/              # Express API Routes (/api/v1/*)
+    │   ├── services/            # Service Layer (Business Logic)
+    │   ├── utils/               # ApiError, ApiResponse, JWT, Generators
+    │   ├── validations/         # Zod Request Schemas
+    │   └── server.js            # Express Application Entry Point
+    └── package.json
 ```
 
 ---
 
-# Import Rules
+## 🔐 Security & Access Control Matrix (RBAC)
 
-Import order must always be:
-
-1. React
-
-2. Third Party Libraries
-
-3. Shared Libraries
-
-4. Shared UI Components
-
-5. Feature Components
-
-6. Hooks
-
-7. Services
-
-8. Utilities
-
-9. Relative Imports
-
-Separate import groups using one blank line.
+| API Endpoint | HTTP Method | Customer | Agent | Admin | Ownership Validation |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| `/api/v1/auth/register` | `POST` | Public | Public | Public | N/A |
+| `/api/v1/auth/login` | `POST` | Public | Public | Public | N/A |
+| `/api/v1/policies/apply` | `POST` | ✅ | ❌ | ❌ | Enforces `customerId = req.user.id` |
+| `/api/v1/policies/:id/status` | `PATCH` | ❌ | ✅ | ✅ | Agent/Admin review guard |
+| `/api/v1/payments/customer-pay`| `POST` | ✅ | ❌ | ❌ | Enforces customer policy ownership |
+| `/api/v1/claims` | `POST` | ✅ | ✅ | ✅ | Requires active policy owned by customer |
+| `/api/v1/documents` | `POST` | ✅ | ✅ | ✅ | Requires owned claim or customer profile |
+| `/api/v1/policy-types` | `POST/PATCH/DELETE`| ❌ | ❌ | ✅ | Admin configuration guard |
+| `/api/v1/users` | `GET/PATCH/DELETE` | ❌ | ❌ | ✅ | Admin management guard |
 
 ---
 
-# State Management Strategy
-
-Local State
-
-Use
-
-```
-
-```
-useState
-
-```
-
-```
-
-Derived State
-
-Use
-
-```
-
-```
-useMemo
-
-```
-
-```
-
-Side Effects
-
-Use
-
-```
-
-```
-useEffect
-
-```
-
-```
-
-Authentication State
-
-Global Context
-
-Future global state should only be introduced when necessary.
-
-Avoid unnecessary global state.
-
----
-
-# Routing Strategy
-
-Routes are managed centrally.
-
-Public Routes
-
-- Login
-- Forgot Password
-- Reset Password
-
-Protected Routes
-
-- Dashboard
-- Users
-- Policies
-- Claims
-
-Authentication should guard protected routes.
-
----
-
-# Error Handling Strategy
-
-Services
-
-Throw errors.
-
-Hooks
-
-Interpret errors.
-
-Components
-
-Display errors.
-
-Never show backend errors directly without handling.
-
----
-
-# Validation Strategy
-
-Validation belongs inside feature validations.
-
-Example
-
-```
-
-```
-auth/
-
-validations/
-
-login.schema.js
-
-```
-
-```
-
-UI should never contain validation logic.
-
----
-
-# Reusable Components
-
-Shared components belong in
-
-```
-
-```
-components/ui
-
-```
-
-```
-
-Feature-specific components remain inside their feature.
-
-Never duplicate reusable components.
-
----
-
-# Naming Conventions
-
-Components
-
-PascalCase
-
-Example
-
-```
-
-```
-LoginPage.jsx
-
-```
-
-```
-
-Hooks
-
-camelCase
-
-```
-
-```
-useAuth.js
-
-```
-
-```
-
-Services
-
-```
-
-```
-auth.service.js
-
-```
-
-```
-
-Constants
-
-UPPER_CASE
-
-Files
-
-Meaningful descriptive names.
-
----
-
-# Accessibility Standards
-
-Every form element must have
-
-- Label
-- Keyboard Support
-- ARIA attributes where required
-- Semantic HTML
-
-Accessibility is mandatory.
-
----
-
-# Performance Guidelines
-
-Avoid unnecessary renders.
-
-Avoid premature memoization.
-
-Optimize only after identifying a real bottleneck.
-
-Readability is preferred over micro-optimizations.
-
----
-
-# Development Rules
-
-Always
-
-✅ Follow folder structure
-
-✅ Reuse existing components
-
-✅ Write readable code
-
-✅ Keep responsibilities separated
-
-Never
-
-❌ Change architecture
-
-❌ Create unnecessary abstractions
-
-❌ Modify unrelated files
-
-❌ Duplicate code
-
-❌ Install dependencies without approval
-
-❌ Mix UI with business logic
-
----
-
-# Scalability
-
-New features should integrate without changing existing architecture.
-
-Every feature should remain independently maintainable.
-
-The architecture should support long-term growth.
-
----
-
-# AI Development Rules
-
-When implementing tasks
-
-Always
-
-- Read existing code first.
-- Follow this architecture.
-- Reuse existing components.
-- Keep changes minimal.
-- Implement only the requested scope.
-
-Never
-
-- Assume future requirements.
-- Rewrite unrelated code.
-- Invent new architecture.
-- Refactor outside the requested task.
-- Create files that were not requested.
-
-When uncertain,
-
-Prefer preserving the existing architecture instead of making assumptions.
-
----
-
-# Final Rule
-
-If any implementation conflicts with this document,
-
-this document takes precedence.
+## 📊 Analytics & Reporting Architecture
+
+- **Live MoM Trends**: Calculates real-time Month-over-Month growth percentage for Active Policies, Premium Collections, Active Cover Limits, and Pending Claims using PostgreSQL timestamps.
+- **Distribution Charts**: Rendered with Chart.js donut and line graph visuals.
+- **Automated Alerts**: Dynamic system alerts generated for policy expirations (<= 30 days), overdue payments, and pending claim queues.
